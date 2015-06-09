@@ -1,10 +1,9 @@
 #!/usr/bin/ruby
 
-INFILE = File.expand_path '~/.i3/_config'
+INFILE = File.expand_path "~/.i3/#{ARGV[0] || '_config'}"
 OUTFILE = File.expand_path '~/.i3/config'
 
-#config = File.read INFILE
-config = "#!nobracket\n" + STDIN.read
+config = File.read INFILE
 
 # kill comments; bangs in them interfere
 nobracket = config.include? '#!nobracket'
@@ -127,5 +126,4 @@ while config =~ exrgx
     }
 end
 
-#File.write OUTFILE, config
-puts config
+File.write OUTFILE, config
