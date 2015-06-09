@@ -192,9 +192,16 @@ if __FILE__ == $0
     OUTFILE = File.expand_path '~/.i3/config'
 
     config = File.read INFILE
-    File.write(OUTFILE, i3bang(config, "
-    ##########
-    # Generated via i3bang (https://github.com/KeyboardFire/i3bang).
-    # Original file: #{fname}
-    ##########\n"))
+    begin
+        File.write(OUTFILE, i3bang(config, "
+        ##########
+        # Generated via i3bang (https://github.com/KeyboardFire/i3bang).
+        # Original file: #{fname}
+        ##########\n"))
+    rescue I3bangError => e
+        File.write('/tmp/i3bangerr.txt', "#{e.inspect}\n#{e.backtrace * "\n"}")
+        `i3-nagbar -m \
+            'There was an error parsing your config file with i3bang!' \
+            -b 'show errors' 'i3-sensible-pager /tmp/i3bangerr.txt'`
+    end
 end
