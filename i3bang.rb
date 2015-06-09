@@ -7,12 +7,14 @@ OUTFILE = File.expand_path '~/.i3/config'
 config = File.read INFILE
 
 # kill comments; bangs in them interfere
+# also annoying trailing whitespace
 nobracket = config.include? '#!nobracket'
 config.gsub! /\s*#.*\n/, "\n"
+config.gsub! /\s+$/, ''
 
-# cleanup: remove empty lines
-config.gsub! /\n+/, "\n"
-config.sub! /\A\n/, ''
+# line continuations
+config.gsub! /\\\n\s*/, ''
+config += "\n"  # add back trailing newline
 
 # add notice
 # (feel free to remove/edit this; I don't mind)
@@ -20,10 +22,78 @@ config = "# Generated via i3bang (https://github.com/KeyboardFire/i3bang).
 # Original file: #{fname}\n" + config
 
 # change shorthand format to expanded, regular format if specified
-config.gsub! /^\s*(![@!]?)([^<@!\n][^!\n]*)$/, '\1<\2>' if nobracket
-config.gsub! /(![@!]?)([^<@!\s]\S*)/, '\1<\2>' if nobracket
+# UGLY HACK WARNING: !!<...!...> can interfere, so we're going to take
+# all existing ![@!]?<...>'s out and put them back in later.
+# BUT, expansions might contain !... and !!...s as well, so we have to rerun
+# this upon every expansion. Therefore, this is stuck inside a method.
+def expand_nobracket config
+    placeholder = '__PLCHLD__'
+    ph_arr = []
+    n = -1
+    config.gsub!(/![@!]?<[^>]*>/) {|m|
+        n += 1
+        ph_arr.push m
+        placeholder + "<#{n}>"
+    }
+    # now the actual substitutions
+    config.gsub! /^\s*(![@!]?)([^<@!\n][^!\n]*)$/, '\1<\2>'
+    config.gsub! /(![@!]?)([^<@!\s]\S*)/, '\1<\2>'
+    # replace the placeholders
+    config.gsub!(/#{placeholder}<(\d+)>/) { ph_arr[$1.to_i] }
+end
+expand_nobracket config if nobracket
 
-# first replace all variables/math (!<...>) with their eval'd format
+# first handle !@<...> sections
+i3bang_sections = Hash.new
+config.gsub!(/!@<([^>]*)>/) {
+    if $1.include? "\n"
+        name, data = $1.split "\n", 2
+        noecho = false
+        if name[0] == '*'
+            noecho = true
+            name = name[1..-1]
+        end
+        i3bang_sections[name] = data
+        noecho ? '' : data
+    else
+        i3bang_sections[$1]
+    end
+}
+
+# then expand !!<...> into separate lines
+exrgx = /!!<([^>]*)>/
+while config =~ exrgx
+    config.sub!(/^.*#{exrgx}.*$/) {|line|
+        expansions = line.scan(exrgx).map{|expansion|
+            group, values = expansion[0].split('!', 2)
+            if values == nil
+                values = group
+                group = "__default_group"
+            end
+            [group, values.gsub(/(\d+)\.\.(\d+)/) {
+                [*$1.to_i..$2.to_i] * ?,
+            }.split(?,, -1)]
+        }
+        group = expansions[0][0]
+        # equalize length of values for same groups
+        maxlen = expansions.select{|g, _| g == group}.map(&:last).map(&:size).max
+        expansions.map! {|g, values|
+            g == group ?
+                [g, (values * (maxlen * 1.0 / values.length).ceil)[0...maxlen]] :
+                [g, values]
+        }
+        Array.new(expansions[0][1].length) { line.clone }.map {|l|
+            idx = -1
+            l.gsub(exrgx) {|m|
+                idx += 1
+                expansions[idx][0] == group ? expansions[idx][1].shift : m
+            }
+        }.join "\n"
+    }
+    expand_nobracket config if nobracket
+end
+
+# now replace all variables/math (!<...>) with their eval'd format
 i3bang_vars = Hash.new {|_, k| k.is_a?(Symbol) ? nil : k }
 config.gsub!(/(?<!!)!<([^>]*)>/) {
     s = $1
@@ -93,47 +163,8 @@ config.gsub!(/(?<!!)!<([^>]*)>/) {
     i3bang_vars[stack[0]]
 }
 
-# then handle !@<...> sections
-i3bang_sections = Hash.new
-config.gsub!(/!@<([^>]*)>/) {
-    if $1.include? "\n"
-        name, data = $1.split "\n", 2
-        i3bang_sections[name] = data
-    else
-        i3bang_sections[$1]
-    end
-}
-
-# now expand !!<...> into separate lines
-exrgx = /!!<([^>]*)>/
-while config =~ exrgx
-    config.sub!(/^.*#{exrgx}.*$/) {|line|
-        expansions = config.scan(exrgx).map.with_index{|expansion, idx|
-            group, values = expansion[0].split('!', 2)
-            if values == nil
-                values = group
-                group = "_auto_group_#{idx}"
-            end
-            [group, values.gsub(/(\d+)\.\.(\d+)/) {
-                [*$1.to_i..$2.to_i] * ?,
-            }.split(/, ?/)]
-        }
-        group = expansions[0][0]
-        # equalize length of values for same groups
-        maxlen = expansions.select{|g, _| g == group}.map(&:last).map(&:size).max
-        expansions.map! {|g, values|
-            g == group ?
-                [g, (values * (maxlen * 1.0 / values.length).ceil)[0...maxlen]] :
-                [g, values]
-        }
-        Array.new(expansions[0][1].length) { line.clone }.map {|l|
-            idx = -1
-            l.gsub(exrgx) {|m|
-                idx += 1
-                expansions[idx][0] == group ? expansions[idx][1].shift : m
-            }
-        }.join "\n"
-    }
-end
+# cleanup: remove empty lines
+config.gsub! /\n+/, "\n"
+config.sub! /\A\n/, ''
 
 File.write OUTFILE, config
