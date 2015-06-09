@@ -1,13 +1,23 @@
 #!/usr/bin/ruby
 
-INFILE = File.expand_path "~/.i3/#{ARGV[0] || '_config'}"
+fname = ARGV[0] || '_config'
+INFILE = File.expand_path "~/.i3/#{fname}"
 OUTFILE = File.expand_path '~/.i3/config'
 
 config = File.read INFILE
 
 # kill comments; bangs in them interfere
 nobracket = config.include? '#!nobracket'
-config.gsub! /#.*\n/, "\n"
+config.gsub! /\s*#.*\n/, "\n"
+
+# cleanup: remove empty lines
+config.gsub! /\n+/, "\n"
+config.sub! /\A\n/, ''
+
+# add notice
+# (feel free to remove/edit this; I don't mind)
+config = "# Generated via i3bang (https://github.com/KeyboardFire/i3bang).
+# Original file: #{fname}\n" + config
 
 # change shorthand format to expanded, regular format if specified
 config.gsub! /^\s*(![@!]?)([^<@!\n][^!\n]*)$/, '\1<\2>' if nobracket
