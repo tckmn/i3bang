@@ -160,9 +160,11 @@ def i3bang config, header = ''
                 stack.push t
             when '='
                 b, a = stack.pop, stack.pop
+                raise I3bangError, "not enough operands for #{t}" if a.nil? || b.nil?
                 i3bang_vars[a] = i3bang_vars[b]
             else
                 b, a = stack.pop, stack.pop
+                raise I3bangError, "not enough operands for #{t}" if a.nil? || b.nil?
                 stack.push (case t
                             when '+' then ->a, b { a + b }
                             when '-' then ->a, b { a - b }

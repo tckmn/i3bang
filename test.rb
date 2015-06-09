@@ -50,6 +50,7 @@ class TestI3bang < Test::Unit::TestCase
         assert_i3bang_raise '!2$2'
         assert_i3bang_raise '!((1+1)'
         assert_i3bang_raise '!(1+1))'
+        assert_i3bang_raise '!1+'
     end
 
     def test_basic_expansions
