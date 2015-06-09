@@ -92,6 +92,9 @@ def i3bang config, header = ''
         expand_nobracket config if nobracket
     end
 
+    # line continuations again (maybe the expansion created more)
+    config.gsub! /\\\n\s*/, ''
+
     # now replace all variables/math (!<...>) with their eval'd format
     i3bang_vars = Hash.new {|_, k|
         if k.is_a? Symbol
@@ -196,10 +199,10 @@ if __FILE__ == $0
     config = File.read INFILE
     begin
         File.write(OUTFILE, i3bang(config, "
-        ##########
-        # Generated via i3bang (https://github.com/KeyboardFire/i3bang).
-        # Original file: #{fname}
-        ##########\n"))
+##########
+# Generated via i3bang (https://github.com/KeyboardFire/i3bang).
+# Original file: #{fname}
+##########\n"))
     rescue I3bangError => e
         File.write('/tmp/i3bangerr.txt', "#{e.inspect}\n#{e.backtrace * "\n"}")
         `i3-nagbar -m \
