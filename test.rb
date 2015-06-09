@@ -7,6 +7,12 @@ module Test::Unit::Assertions
     def assert_i3bang i3bang_in, i3bang_out, *a
         assert_equal i3bang("#!nobracket\n#{i3bang_in}"), "#{i3bang_out}\n", *a
     end
+
+    def assert_i3bang_raise i3bang_in, *a
+        assert_raise(I3bangError, *a) {
+            i3bang "#!nobracket\n#{i3bang_in}"
+        }
+    end
 end
 
 class TestI3bang < Test::Unit::TestCase
@@ -37,6 +43,13 @@ class TestI3bang < Test::Unit::TestCase
         assert_i3bang '!5+6*7', '47'
         assert_i3bang '!(5+6)*7', '77'
         assert_i3bang '!<a=1+2*3-4/5**6>!a', '7'
+    end
+
+    def test_math_errors
+        assert_i3bang_raise '!thisdoesntexist'
+        assert_i3bang_raise '!2$2'
+        assert_i3bang_raise '!((1+1)'
+        assert_i3bang_raise '!(1+1))'
     end
 
     def test_basic_expansions
@@ -85,6 +98,10 @@ class TestI3bang < Test::Unit::TestCase
         assert_i3bang "!@<foo\nfoo\nbar\nbaz>\n!@foo",
             "foo\nbar\nbaz\nfoo\nbar\nbaz"
         assert_i3bang "!@<*a\nblah>\nfoo !@a baz", 'foo blah baz'
+    end
+
+    def test_section_errors
+        assert_i3bang_raise "!@thisdoesntexist"
     end
 
     def test_line_continuations

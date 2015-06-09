@@ -1,5 +1,7 @@
 #!/usr/bin/ruby
 
+class I3bangError < RuntimeError; end
+
 def i3bang config, header = ''
 
     # kill comments; bangs in them interfere
@@ -39,7 +41,9 @@ def i3bang config, header = ''
     expand_nobracket config if nobracket
 
     # first handle !@<...> sections
-    i3bang_sections = Hash.new
+    i3bang_sections = Hash.new {|_, x|
+        raise I3bangError, "unknown section #{x}"
+    }
     config.gsub!(/!@<([^>]*)>/) {
         if $1.include? "\n"
             name, data = $1.split "\n", 2
@@ -61,7 +65,7 @@ def i3bang config, header = ''
         config.sub!(/^.*#{exrgx}.*$/) {|line|
             expansions = line.scan(exrgx).map{|expansion|
                 group, values = expansion[0].split('!', 2)
-                if values == nil
+                if values.nil?
                     values = group
                     group = "__default_group"
                 end
@@ -89,7 +93,13 @@ def i3bang config, header = ''
     end
 
     # now replace all variables/math (!<...>) with their eval'd format
-    i3bang_vars = Hash.new {|_, k| k.is_a?(Symbol) ? nil : k }
+    i3bang_vars = Hash.new {|_, k|
+        if k.is_a? Symbol
+            raise I3bangError, "unknown variable #{k}"
+        else
+            k
+        end
+    }
     config.gsub!(/(?<!!)!<([^>]*)>/) {
         s = $1
         # Now we i3bang_eval s
@@ -97,7 +107,13 @@ def i3bang config, header = ''
         # we assume everything is left-associative for simplicity
 
         # precedence and stacks setup
-        prec = Hash.new(-1).merge({
+        prec = Hash.new {|_, x|
+            if x.nil? || '()'.include?(x)
+                -1
+            else
+                raise I3bangError, "unknown operator #{x}"
+            end
+        }.merge({
             '=' => 0,
             '+' => 1, '-' => 1,
             '*' => 2, '/' => 2, '%' => 2,
@@ -125,7 +141,10 @@ def i3bang config, header = ''
             when '('  # open paren
                 opstack.push t
             when ')'  # close paren
-                rpn.push op while (op = opstack.pop) != '('
+                while (op = opstack.pop) != '('
+                    raise I3bangError, 'mismatched parens' if op.nil?
+                    rpn.push op
+                end
             else  # operator
                 rpn.push opstack.pop while prec[t] <= prec[opstack[-1]]
                 opstack.push t
@@ -151,6 +170,7 @@ def i3bang config, header = ''
                             when '/' then ->a, b { a / b }
                             when '%' then ->a, b { a % b }
                             when '**' then ->a, b { a ** b }
+                            when '(' then raise I3bangError, 'mismatched parens'
                            end)[i3bang_vars[a], i3bang_vars[b]]
             end
         end
