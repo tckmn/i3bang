@@ -5,7 +5,7 @@ require 'test/unit'
 
 module Test::Unit::Assertions
     def assert_i3bang i3bang_in, i3bang_out, *a
-        assert_equal i3bang("#!nobracket\n#{i3bang_in}"), "#{i3bang_out}\n", *a
+        assert_equal i3bang("#!nobracket\n#{i3bang_in}").rstrip, i3bang_out, *a
     end
 
     def assert_i3bang_raise i3bang_in, *a
@@ -104,6 +104,17 @@ class TestI3bang < Test::Unit::TestCase
 
     def test_section_errors
         assert_i3bang_raise "!@thisdoesntexist"
+    end
+
+    def test_conditionals
+        ENV['foo'] = 'bar'
+        assert_i3bang "!?<foo=bar\nbaz\n>", 'baz'
+        assert_i3bang "!?<foo=baz\nbar\n>", ''
+    end
+
+    def test_conditional_errors
+        assert_i3bang_raise "!?<\n>"
+        assert_i3bang_raise "!?<foo\nbar\nbaz\n>"
     end
 
     def test_line_continuations

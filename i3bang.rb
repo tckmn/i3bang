@@ -27,7 +27,22 @@ def i3bang config, header = ''
         placeholder = '__PLCHLD__'
         ph_arr = []
         n = -1
-        config.gsub!(/!@<+[\s\S]*?\n>(?=\n)|!@<[^>+][^>]*>|!!?<[^>]*>/) {|m|
+        config.gsub!(/
+                     # nested brackets:
+                     (?:!\?<|!@<+)  # conditionals or sections in raw mode
+                       [\s\S]*?     # anything, including newlines
+                     \n>(?=\n)      # bracket on its own line
+                     |
+                     # non-nested sections:
+                     !@<
+                       [^>+][^>]*   # no + because that signifies raw mode
+                     >
+                     |
+                     # "regular" brackets (!<...> and !!<...>):
+                     !!?<
+                       [^>]*
+                     >
+                     /x) {|m|
             n += 1
             # but we still want to expand !'s in !@<foo\n...>
             if m[1] == '@'
@@ -44,14 +59,46 @@ def i3bang config, header = ''
             placeholder + "<#{n}>"
         }
         # now the actual substitutions
-        config.gsub! /^\s*(![@!]?)([^<@!\n][^!\n]*)$/, '\1<\2>'
-        config.gsub! /(![@!]?)([^<@!\s]\S*)/, '\1<\2>'
+        # bangs at the beginning of the line - we always expand these, even
+        #   when whitespace follows them
+        config.gsub!(/
+                     ^\s*  # beginning of line, with possible whitspace
+                     (![@!?]?)  # the type of thing it is
+                     (
+                       [^!\n]*    # exclude !'s because there could be two
+                                  #   separate !<...>'s on one line
+                     )$         # end of line, we want to capture everything
+                     /x, '\1<\2>')
+        # inline bangs, we stop at whitespace for these
+        config.gsub!(/
+                     (![@!?]?)  # the type of thing it is
+                     (
+                       [^<@!?\s]  # we have to exclude:
+                                  #   - < to avoid adding brackets where they already exist
+                                  #   - @!? to avoid premature bracket-adding
+                                  #     (ex. !!foo -> !<!foo>)
+                       \S*        # grab everything until whitespace is found
+                     )
+                     /x, '\1<\2>')
         # replace the placeholders
         config.gsub!(/#{placeholder}<(\d+)>/) { ph_arr[$1.to_i] }
     end
     expand_nobracket config if nobracket
 
-    # first handle !@<...> sections
+    # first check for !?<...> environment variable conditionals
+    config.gsub!(/!\?<([\s\S]*?\n)>(?=\n)/) {
+        condition, data = $1.split "\n", 2
+        raise I3bangError, 'insufficient argumets for conditional' if condition.nil? || data.nil?
+        raise I3bangError, "malformed condition #{condition}" unless condition.index '='
+        var, val = condition.split '=', 2
+        if ENV[var] == val
+            data
+        else
+            ''
+        end
+    }
+
+    # next handle !@<...> sections
     i3bang_sections = Hash.new {|_, x|
         raise I3bangError, "unknown section #{x}"
     }
