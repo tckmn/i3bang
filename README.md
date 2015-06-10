@@ -103,12 +103,23 @@ becomes
 
 ---
 
+Environment variable conditionals:
+
+    !?<USER=someusername
+      ...
+    >
+
+This will only add the content inside the conditional to your config file if
+i3bang is run by user "someusername."
+
+---
+
 Raw sections:
 
     !@<+default_keybindings
-    ...  # (you can have !!<expansions> and !<math> inside here)
+      ...  # (you can have !!<expansions> and !<math> inside here)
     >
-    ...
+
     mode "foo" {
             ...
             !@default_keybindings
