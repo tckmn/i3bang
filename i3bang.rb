@@ -27,8 +27,19 @@ def i3bang config, header = ''
         placeholder = '__PLCHLD__'
         ph_arr = []
         n = -1
-        config.gsub!(/![@!]?<[^>]*>/) {|m|
+        config.gsub!(/!@<+[\s\S]*?\n>(?=\n)|!@<[^>+][^>]*>|!!?<[^>]*>/) {|m|
             n += 1
+            # but we still want to expand !'s in !@<foo\n...>
+            if m[1] == '@'
+                m = m[3..-2]
+                expand = false
+                if m[0] == '+'
+                    expand = true
+                    m = m[1..-1]
+                end
+                expand_nobracket m if expand
+                m = '!@<' + m + '>'
+            end
             ph_arr.push m
             placeholder + "<#{n}>"
         }
@@ -44,9 +55,10 @@ def i3bang config, header = ''
     i3bang_sections = Hash.new {|_, x|
         raise I3bangError, "unknown section #{x}"
     }
-    config.gsub!(/!@<([^>]*)>/) {
-        if $1.include? "\n"
-            name, data = $1.split "\n", 2
+    config.gsub!(/!@<+([\s\S]*?\n)>(?=\n)|!@<([^>+][^>]*)>/) {
+        sec = $1 || $2
+        if sec.include? "\n"
+            name, data = sec.split "\n", 2
             noecho = false
             if name[0] == '*'
                 noecho = true
@@ -55,7 +67,7 @@ def i3bang config, header = ''
             i3bang_sections[name] = data
             noecho ? '' : data
         else
-            i3bang_sections[$1]
+            i3bang_sections[sec]
         end
     }
 
