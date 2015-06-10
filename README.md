@@ -101,6 +101,30 @@ becomes
             bindsym KP_1 exec xdotool mousemove_relative -8 8
             bindsym KP_3 exec xdotool mousemove_relative 8 8
 
+---
+
+Raw sections:
+
+    !@<+default_keybindings
+    ...  # (you can have !!<expansions> and !<math> inside here)
+    >
+    ...
+    mode "foo" {
+            ...
+            !@default_keybindings
+    }
+
+This allows you to keep your default mode keybindings in different modes. When
+you prepend a `+` to a section's name, it is interpreted as meaning "raw mode,"
+which means that a.) all `!!<expansions>` and `!<math>` is treated as it
+normally would, and b.) only a `>` on its own line can end the section
+(allowing you to still be able to use `!!<expansions>`/`!<math>` with brackets.
+Hence, you can simply wrap all your default keybindings in a
+`!@<+default_keybindings ... >`, and then stick a `!@default_keybindings` at
+the end of every mode that you want to keep them in (put it at the end because
+for some reason keybindings that come *first* take precedence and override
+bindings to the same key that come later).
+
 ## Usage
 
 1. Place `i3bang.rb` in your `~/.i3` (copy it there, move it there, or make a
