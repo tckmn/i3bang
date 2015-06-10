@@ -99,6 +99,7 @@ class TestI3bang < Test::Unit::TestCase
         assert_i3bang "!@<foo\nfoo\nbar\nbaz>\n!@foo",
             "foo\nbar\nbaz\nfoo\nbar\nbaz"
         assert_i3bang "!@<*a\nblah>\nfoo !@a baz", 'foo blah baz'
+        assert_i3bang "!@<+foo\n!<1+1>\n>\n!@foo", "2\n2"
     end
 
     def test_section_errors
