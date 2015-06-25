@@ -269,4 +269,3 @@ if __FILE__ == $0
             -b 'show errors' 'i3-sensible-pager /tmp/i3bangerr.txt'`
     end
 end
-# vim: set expandtab tabstop=4 shiftwidth=4 softtabstop=4:
