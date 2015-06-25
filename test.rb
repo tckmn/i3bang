@@ -132,3 +132,4 @@ class TestI3bang < Test::Unit::TestCase
         assert_i3bang '_!1+1 + 2     ', '_2 + 2'
     end
 end
+# vim: set expandtab tabstop=4 shiftwidth=4 softtabstop=4:
