@@ -7,7 +7,7 @@ def i3bang config, header = ''
     # kill comments; bangs in them interfere
     # also annoying trailing whitespace
     nobracket = config.include? '#!nobracket'
-    config.gsub! /\s*#*#[! ].*\n/, "\n"
+    config.gsub! /\s*#*#[! ](?!i3 config).*\n/, "\n"
     config.gsub! /\s+$/, ''
 
     # line continuations
