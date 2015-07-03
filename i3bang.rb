@@ -251,9 +251,8 @@ def i3bang config, header = ''
 end
 
 if __FILE__ == $0
-    fname = ARGV[0] || '_config'
-    INFILE = File.expand_path "~/.i3/#{fname}"
-    OUTFILE = File.expand_path '~/.i3/config'
+    INFILE = File.expand_path(ARGV[0] || '~/.i3/_config')
+    OUTFILE = File.expand_path(ARGV[1] || '~/.i3/config')
 
     config = File.read INFILE
     begin
