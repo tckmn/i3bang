@@ -13,6 +13,14 @@ Here are a few select snippets:
 
 ---
 
+Firstly, you're probably going to want to put this in your config file:
+
+    #!nobracket
+
+This allows you to use i3bang without angle brackets (`<>`) and instead use
+no open delimiter and whitespace as a "close delimiter." This is typically what
+you want, and it's only not set by default for backwards compatibility.
+
 Very simple expansions:
 
     bindsym !!Return,Escape,space,$mod+r mode "default"
