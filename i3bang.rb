@@ -259,7 +259,7 @@ if __FILE__ == $0
         File.write(OUTFILE, i3bang(config, "
 ##########
 # Generated via i3bang (https://github.com/KeyboardFire/i3bang).
-# Original file: #{fname}
+# Original file: #{ARGV[0] || '~/.i3/_config'}
 ##########\n"))
     rescue I3bangError => e
         File.write('/tmp/i3bangerr.txt', "#{e.inspect}\n#{e.backtrace * "\n"}")
