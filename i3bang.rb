@@ -85,6 +85,16 @@ def i3bang config, header = ''
     end
     expand_nobracket config if nobracket
 
+    # include file content
+    config.gsub!(/!#<([^>]*)>/) {
+        incfile = File.expand_path($1)
+        begin
+            data = File.read(incfile)
+        rescue
+            raise I3bangError, "Cannot read from file: #{incfile}"
+        end
+    }
+
     # first check for !?<...> environment variable conditionals
     config.gsub!(/!\?<([\s\S]*?\n)>(?=\n)/) {
         condition, data = $1.split "\n", 2
